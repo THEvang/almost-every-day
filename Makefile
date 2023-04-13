@@ -1,9 +1,10 @@
 SHELL = /bin/sh
 
 CC=gcc
-CFLAGS += -I.
+CFLAGS += -I. -I./include
+CFLAGS += -lglfw -ldl
 
-SRC=main.c
+SRC=main.c src/glad.c
 OBJS=$(patsubst %.c,%.o, $(SRC))
 TARGET=game
 
@@ -11,7 +12,7 @@ TARGET=game
 all: game
 
 $(TARGET) : $(OBJS)
-	$(CC) -o $@ $< $(CFLAGS)
+	$(CC) -o $@ $^ $(CFLAGS)
 
 .PHONY: clean
 clean:
