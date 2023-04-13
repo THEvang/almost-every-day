@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <sys/stat.h>
 
 #include "glad/glad.h"
 #include <GLFW/glfw3.h>
@@ -24,6 +25,7 @@ read_entire_file(const char* file_name) {
 	const char* mode = "r";
 	FILE* file = fopen(file_name, mode);
 	if (file == NULL) {
+		printf("Failed to open file\n");
 		return NULL;
 	}
 
@@ -67,35 +69,68 @@ log_link_results(unsigned int shader_program) {
 	}
 }
 
-int
-read_and_compile_shaders(const char* vertex_shader_file, const char* fragment_shader_file) {
+struct ShaderSources {
+	const char* vertex;
+	const char* fragment;
+	int has_changed;
+};
+
+struct ShaderProgram {
+	struct ShaderSources sources;
+	unsigned int id;
+};
+
+struct ShaderProgram
+read_and_compile_shaders(struct ShaderSources sources) {
 
 	unsigned int vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-	void* vertex_shader_source = read_entire_file(vertex_shader_file);
+	void* vertex_shader_source = read_entire_file(sources.vertex);
 	glShaderSource(vertex_shader, 1, (const char**) &vertex_shader_source, NULL);
 	glCompileShader(vertex_shader);
 	free(vertex_shader_source);
+	vertex_shader_source = NULL;
 
-	log_compile_results(vertex_shader_file, vertex_shader);
+	log_compile_results(sources.vertex, vertex_shader);
 
 	unsigned int fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-	void* fragment_shader_source = read_entire_file(fragment_shader_file);
+	void* fragment_shader_source = read_entire_file(sources.fragment);
 	glShaderSource(fragment_shader, 1, (const char**) &fragment_shader_source, NULL);
 	glCompileShader(fragment_shader);
 	free(fragment_shader_source);
+	fragment_shader_source = NULL;
 
-	log_compile_results(fragment_shader_file, fragment_shader);
+	log_compile_results(sources.fragment, fragment_shader);
 
 	unsigned int shader_program = glCreateProgram();
 	glAttachShader(shader_program, vertex_shader);
 	glAttachShader(shader_program, fragment_shader);
 	glLinkProgram(shader_program);
 
+	log_link_results(shader_program);
+
 	glDeleteShader(vertex_shader);
 	glDeleteShader(fragment_shader);
 
-	return shader_program;
+	return (struct ShaderProgram) {sources, shader_program};
 }
+
+int
+file_changed(const char* path, time_t* old_time) {
+	struct stat file_stat;
+	int err = stat(path, &file_stat);
+	
+	if (err != 0) {
+		return 0;
+	}
+	
+	if (file_stat.st_mtime > *old_time) {
+		*old_time = file_stat.st_mtime;	
+		return 1;
+	} else {
+		return 0;
+	}
+	
+};
 
 int
 main() {
@@ -138,15 +173,29 @@ main() {
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*) 0);
 	glEnableVertexAttribArray(0);
 	
-	int shader_program = read_and_compile_shaders("shaders/default.vert", "shaders/default.frag");
+	struct ShaderSources shader_sources = {
+		"shaders/default.vert",
+		"shaders/default.frag",
+		0
+	};
+	struct ShaderProgram shader_program = {0};
+	
+	time_t old_time_vertex = {0};
+	time_t old_time_fragment = {0};
 
 	while(!glfwWindowShouldClose(window)) {
 		process_input(window);
 
+		if (file_changed(shader_sources.vertex, &old_time_vertex) || 
+				file_changed(shader_sources.fragment, &old_time_fragment)) {
+			glDeleteProgram(shader_program.id);
+			shader_program = read_and_compile_shaders(shader_sources);
+		}
+
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		glUseProgram(shader_program);
+		glUseProgram(shader_program.id);
 		glBindVertexArray(VAO);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 
