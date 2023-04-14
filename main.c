@@ -6,7 +6,23 @@
 #include "glad/glad.h"
 #include <GLFW/glfw3.h>
 
+#include <math.h>
 #include "every_math.h"
+
+Matrix4 perspective_matrix(double fov, double aspect_ratio, double far_plane) {
+	Matrix4 r = {0};
+	
+	double near_plane = 1.0;
+	double c = 1.0 / tan(fov * 0.5);
+
+	r.e[0] = c / aspect_ratio;
+	r.e[5] = c;
+	r.e[10] = -(far_plane + near_plane) / (far_plane - near_plane);
+	r.e[11] = - 2.0 * far_plane * near_plane / (far_plane - near_plane);
+	r.e[14] = -1;
+
+	return r;
+}
 
 void
 framebuffer_size_callback(GLFWwindow* window, int width, int height) {
@@ -14,20 +30,28 @@ framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 }
 
 void
-process_input(GLFWwindow* window, Quaternion* r) {
+process_input(GLFWwindow* window, Quaternion* r, double *fov) {
 	
 	if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
 		glfwSetWindowShouldClose(window, true);
 	}
 
 	if(glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
-		*r = quat_rotate(*r, -1);
+		*r = quat_rotate(*r, -2);
 		*r = quat_normalize(*r);
 	}
 
 	if(glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
-		*r = quat_rotate(*r, 1);
+		*r = quat_rotate(*r, 2);
 		*r = quat_normalize(*r);
+	}
+
+	if(glfwGetKey(window, GLFW_KEY_N) == GLFW_PRESS) {
+		*fov += 2.0;
+	}
+
+	if(glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS) {
+		* fov -= 2.0;
 	}
 }
 
@@ -169,9 +193,9 @@ main() {
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
 	float vertices[] = {
-		-0.5f, -0.5f, 0.0f,
-		0.5f, -0.5f, 0.0f,
-		0.0f, 0.5f, 0.0f
+		-0.5f, -0.5f, -1.0f,
+		0.5f, -0.5f, -1.0f,
+		0.0f, 0.5f, -1.0f
 	};
 	unsigned int VAO;
 	glGenVertexArrays(1, &VAO);
@@ -195,12 +219,14 @@ main() {
 	time_t old_time_vertex = {0};
 	time_t old_time_fragment = {0};
 
-	Quaternion orientation = {0, 0, 0, 1};
+	Quaternion orientation = {.x = 0, .y = 0, .z = 0, .w = 1};
+	double fov = 45;
 
 	while(!glfwWindowShouldClose(window)) {
-		process_input(window, &orientation);
+		process_input(window, &orientation, &fov);
 
 		Matrix4 rotation_matrix = quat_to_matrix(orientation);
+		Matrix4 projection_matrix = perspective_matrix(TO_RAD(fov), (float) width / (float) height, 10);
 
 		if (file_changed(shader_sources.vertex, &old_time_vertex) || 
 				file_changed(shader_sources.fragment, &old_time_fragment)) {
@@ -211,7 +237,10 @@ main() {
 		int modelLoc = glGetUniformLocation(shader_program.id, "model");
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, rotation_matrix.e);
 
-		printf("%f, %f, %f, %f, %f\n", orientation.x, orientation.y, orientation.z, orientation.w, quat_norm(orientation));
+		int projection_location = glGetUniformLocation(shader_program.id, "projection");
+		glUniformMatrix4fv(projection_location, 1, GL_FALSE, projection_matrix.e);
+
+		printf("%f,%f,%f,%f\n", orientation.x, orientation.y, orientation.z, orientation.w);
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 

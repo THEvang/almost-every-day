@@ -84,7 +84,7 @@ Quaternion to_quaternion(double deg, Vector3 axis) {
 }
 
 Quaternion quat_rotate(Quaternion q, double deg) {
-	Quaternion r = to_quaternion(deg, (Vector3) {{0, 0, 1}});
+	Quaternion r = to_quaternion(0.5 * deg, (Vector3) {{0, 0, 1}});
 	return quat_mult(q, r);
 }
 
