@@ -2,7 +2,7 @@ SHELL = /bin/sh
 
 CC=gcc
 CFLAGS += -I. -I./include -Wall
-CFLAGS += -lglfw -ldl
+CFLAGS += -lglfw -ldl -lm
 
 SRC=main.c src/glad.c every_math.c
 OBJS=$(patsubst %.c,%.o, $(SRC))

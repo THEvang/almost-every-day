@@ -14,10 +14,20 @@ framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 }
 
 void
-process_input(GLFWwindow* window) {
+process_input(GLFWwindow* window, Quaternion* r) {
 	
 	if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
 		glfwSetWindowShouldClose(window, true);
+	}
+
+	if(glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
+		*r = quat_rotate(*r, -1);
+		*r = quat_normalize(*r);
+	}
+
+	if(glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
+		*r = quat_rotate(*r, 1);
+		*r = quat_normalize(*r);
 	}
 }
 
@@ -185,12 +195,12 @@ main() {
 	time_t old_time_vertex = {0};
 	time_t old_time_fragment = {0};
 
-	Vector3 a = {{1, 0, 0}};
-	Vector3 b = {{1, 0, 1}};
-	Vector3 c = vec3_cross(a,b);
+	Quaternion orientation = {0, 0, 0, 1};
 
 	while(!glfwWindowShouldClose(window)) {
-		process_input(window);
+		process_input(window, &orientation);
+
+		Matrix4 rotation_matrix = quat_to_matrix(orientation);
 
 		if (file_changed(shader_sources.vertex, &old_time_vertex) || 
 				file_changed(shader_sources.fragment, &old_time_fragment)) {
@@ -198,6 +208,10 @@ main() {
 			shader_program = read_and_compile_shaders(shader_sources);
 		}
 
+		int modelLoc = glGetUniformLocation(shader_program.id, "model");
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, rotation_matrix.e);
+
+		printf("%f, %f, %f, %f, %f\n", orientation.x, orientation.y, orientation.z, orientation.w, quat_norm(orientation));
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 

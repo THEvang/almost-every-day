@@ -1,5 +1,7 @@
 #include "every_math.h"
 
+#include <math.h>
+
 Vector3 vec3_cross(Vector3 a, Vector3 b) {
 	return (Vector3) {
 		.x = a.y*b.z - a.z*b.y,
@@ -72,3 +74,47 @@ Matrix4 quat_to_matrix(Quaternion a) {
 	
 	return r;
 };
+
+Quaternion to_quaternion(double deg, Vector3 axis) {
+	double radians = TO_RAD(deg);
+	return (Quaternion) { 
+		.qv = vec3_scale(sinf(radians), axis),
+		.qw = cosf(radians)
+	};
+}
+
+Quaternion quat_rotate(Quaternion q, double deg) {
+	Quaternion r = to_quaternion(deg, (Vector3) {{0, 0, 1}});
+	return quat_mult(q, r);
+}
+
+Quaternion quat_conjugate(Quaternion q) {
+	return (Quaternion) {
+		.x = -q.x,
+		.y = -q.y,
+		.z = -q.z,
+		.w = q.w
+	};
+}
+
+double
+quat_norm(Quaternion q) {
+	return sqrt(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
+}
+
+Quaternion
+quat_scale(double a, Quaternion q) {
+	return (Quaternion) {
+		.x = q.x * a,
+		.y = q.y * a,
+		.z = q.z * a,
+		.w = q.w * a
+	};
+}
+
+Quaternion
+quat_normalize(Quaternion q) {
+	
+	double norm = quat_norm(q);
+	return quat_scale(1 / norm, q);
+}
