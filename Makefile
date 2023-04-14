@@ -1,10 +1,10 @@
 SHELL = /bin/sh
 
 CC=gcc
-CFLAGS += -I. -I./include
+CFLAGS += -I. -I./include -Wall
 CFLAGS += -lglfw -ldl
 
-SRC=main.c src/glad.c
+SRC=main.c src/glad.c every_math.c
 OBJS=$(patsubst %.c,%.o, $(SRC))
 TARGET=game
 

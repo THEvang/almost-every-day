@@ -6,6 +6,8 @@
 #include "glad/glad.h"
 #include <GLFW/glfw3.h>
 
+#include "every_math.h"
+
 void
 framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 	glViewport(0, 0, width, height);
@@ -182,6 +184,10 @@ main() {
 	
 	time_t old_time_vertex = {0};
 	time_t old_time_fragment = {0};
+
+	Vector3 a = {{1, 0, 0}};
+	Vector3 b = {{1, 0, 1}};
+	Vector3 c = vec3_cross(a,b);
 
 	while(!glfwWindowShouldClose(window)) {
 		process_input(window);
